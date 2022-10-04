@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <com.supercilex.robotscouter.core.ui.views.ContentLoadingHint
+        android:id="@+id/emptyScoutHint"
+        style="@style/RobotScouter.NoContentHint"
+        android:layout_gravity="center"
+        android:text="@string/tutorial_loading_metrics_hint"
+        app:drawableTopCompat="@drawable/ic_cloud_grey_96dp" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@id/metricsView"
+        style="@style/RobotScouter.List.Scouting"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:listitem="@layout/scout_base_counter" />
+
+</FrameLayout>

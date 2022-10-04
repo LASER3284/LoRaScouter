@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="4" by="lint 2.4.0-alpha7">
+
+    <issue
+        id="IconExpectedSize"
+        message="Incorrect icon size for `mipmap-hdpi/ic_launcher_foreground.png`: expected 72x72, but was 162x162">
+        <location
+            file="src/main/res/mipmap-hdpi/ic_launcher_foreground.png" />
+    </issue>
+
+    <issue
+        id="IconExpectedSize"
+        message="Incorrect icon size for `mipmap-mdpi/ic_launcher_foreground.png`: expected 48x48, but was 108x108">
+        <location
+            file="src/main/res/mipmap-mdpi/ic_launcher_foreground.png" />
+    </issue>
+
+    <issue
+        id="IconExpectedSize"
+        message="Incorrect icon size for `mipmap-xhdpi/ic_launcher_foreground.png`: expected 96x96, but was 216x216">
+        <location
+            file="src/main/res/mipmap-xhdpi/ic_launcher_foreground.png" />
+    </issue>
+
+    <issue
+        id="IconExpectedSize"
+        message="Incorrect icon size for `mipmap-xxhdpi/ic_launcher_foreground.png`: expected 144x144, but was 324x324">
+        <location
+            file="src/main/res/mipmap-xxhdpi/ic_launcher_foreground.png" />
+    </issue>
+
+    <issue
+        id="IconExpectedSize"
+        message="Incorrect icon size for `mipmap-xxxhdpi/ic_launcher_foreground.png`: expected 192x192, but was 432x432">
+        <location
+            file="src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png" />
+    </issue>
+
+</issues>

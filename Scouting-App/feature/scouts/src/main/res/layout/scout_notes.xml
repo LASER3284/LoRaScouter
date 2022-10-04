@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.supercilex.robotscouter.core.ui.views.CardMetricLinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    style="@style/RobotScouter.ListItem">
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/textLayout"
+        style="@style/Widget.Design.TextInputLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        tools:hint="Text">
+
+        <androidx.emoji.widget.EmojiAppCompatEditText
+            android:id="@id/name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textMultiLine|textCapSentences" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+</com.supercilex.robotscouter.core.ui.views.CardMetricLinearLayout>

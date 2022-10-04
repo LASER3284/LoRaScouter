@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+The total duration adds up to 300ms (transition_anim_time). The delay is added to make the
+animation feel smoother.
+-->
+<set
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:duration="200"
+    android:shareInterpolator="false"
+    android:startOffset="100">
+
+    <alpha
+        android:interpolator="@android:interpolator/accelerate_quad"
+        android:fromAlpha="0"
+        android:toAlpha="1" />
+
+    <translate
+        android:interpolator="@android:interpolator/decelerate_quad"
+        android:fromXDelta="0"
+        android:fromYDelta="75%"
+        android:toXDelta="0"
+        android:toYDelta="0" />
+
+</set>

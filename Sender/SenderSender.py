@@ -1,0 +1,243 @@
+import os
+import argparse
+import time
+import traceback
+import logging
+import json
+import copy
+import threading
+import serial
+import hashlib
+import serial.tools.list_ports
+from typing import Any, Dict, List, Union
+from ppadb.client import Client as AdbClient
+
+_ARGUMENTS_PROMPT = f"Enter a command to run\n\t- `send`: Send the data to the LoRa to send to the pits\n\t- `wipe`: Wipe all cached device data\n\t- `clear`: Clear all total known event data\n\t- `exit`: Exit the scouting program...\n"
+
+class BackgroundADBWatcher(threading.Thread):
+    """A simple background task that monitors ADB devices on the USB and updates the scouting dictionary."""
+
+    # { device.serial : {"teams": { } } }
+    perDeviceScoutingData: Dict[str, Dict[str, Dict[str, Any]]] = {}
+
+    def __init__(self, client: AdbClient, export_path: str, cache_path: str = "./scouting_cache.json"):
+        super().__init__()
+    
+        self.perDeviceScoutingData = {}
+        self.combinedScoutingData = {}
+        self.client = client
+        self.export_path = export_path
+        self.cache_path = cache_path
+
+        self.event_lock = threading.Lock()
+        self._stop_event = threading.Event()
+
+        self.cachedScoutingData: List[str] = []
+        if os.path.exists(self.cache_path):
+            with open(self.cache_path, "r") as f:
+                self.cachedScoutingData = json.load(f)
+
+    """Runs the task that monitors ADB devices"""
+    def run(self, *args, **kwargs):
+        while not self.stopped():
+            try:
+                devices = self.client.devices()
+
+                with self.event_lock:
+                    for device in devices:
+                        # If we've already 
+                        if device.serial not in self.perDeviceScoutingData.keys():
+                            print(f"Discovered device: {device.serial}")
+
+                        result = device.shell(f'cat \"{self.export_path}\"').strip()
+                        
+                        # Make sure that we have the event lock so we can properly update the JSON
+                        try:
+                            self.perDeviceScoutingData.update({ device.serial : json.loads(result) })
+                        except ValueError:
+                            # json.loads(...) will throw a value error if the JSON is malformed or if the JSON doesn't exist
+                            continue
+
+                time.sleep(1.5)
+            except RuntimeError as err:
+                # We have to do the funky cast to a string in order to actually get the error message.
+                # It's kinda wonky but lol python
+                if ("The remote computer refused the network connection" in str(err)):
+                    yn = input(f"ADB is not running... Please start ADB or type Y: ").strip()
+                    if yn.lower() == "y":
+                        os.system(f"adb start-server")
+                    else:
+                        time.sleep(5)
+                else:
+                    # Just sit and wait for a bit after an exception
+                    traceback.print_exc()
+                    time.sleep(1.5)
+            except:
+                # See above comment
+                traceback.print_exc()
+                time.sleep(1.5)
+
+    def sendViaSerial(self) -> bool:
+        # Acquire the lock so that way we can make sure we merge everything properly
+        with self.event_lock:
+            # { "teams": { "Team": [{"metric": "value"}], "template": { "metric_id" : "metric_name" } }
+            combinedScoutingData: Dict[str, Dict[str, Union[List[Dict[str, Union[str, bool, int, float]]], str]]] = {
+                "teams": {},
+                "template": {}
+            }
+            
+            metricMapping: Dict[str, str] = {}
+
+            for idx, (device_serial, spare) in enumerate(self.perDeviceScoutingData.items()):
+                print(f"[{idx+1}] Combining Scouting Data...")
+                for team, scouts in spare['teams'].items():
+                    print(f"\t[{idx+1}] Handling Team #{team}")
+
+                    shortened_team_scout: List[Dict[str, Union[str, bool, int, float]]] = []
+                    
+                    for scout in scouts:
+                        scout_hash = hashlib.md5(json.dumps(scout).encode('ascii')).hexdigest()
+                        if scout_hash in self.cachedScoutingData:
+                            continue
+
+                        shortened_match_scout: Dict[str, Union[str, bool, int, float]] = {}
+                        # We need to use the metric ID so that way it doesn't overwrite in the JSON
+                        for metric_id, metric in scout['metrics'].items():
+                            # Add the metric ID to the metric mapping if it's not there
+                            if metric_id not in metricMapping.keys():
+                                metricMapping.update({ metric_id : metric['name']})
+                            # Update the match scout with the metric ID to value
+                            # This is mainly to remove various junk that I don't care about
+                            shortened_match_scout.update({ metric_id : metric['value'] })
+                        
+                        # Add the match scout to the team scout list
+                        shortened_team_scout.append(shortened_match_scout)
+                        
+                        self.cachedScoutingData.append(scout_hash)
+                    
+                    # If the team hasn't already been scouted by another device, *add* it to the dictionary
+                    # If the team has been scouted by another device, append to that team's scout list rather than overwriting the dictionary.
+                    if team not in combinedScoutingData:
+                        combinedScoutingData['teams'].update({team : shortened_team_scout})
+                    else:
+                        combinedScoutingData['teams'][team] += shortened_team_scout  # type: ignore
+            
+            combinedScoutingData['template'] = metricMapping # type: ignore
+
+        # Do this once we release the lock so the wipe method can actually wipe
+        self.wipe()
+
+        if len(combinedScoutingData['template']) == 0 or all([len(match_scouts) == 0 for team, match_scouts in combinedScoutingData['teams'].items()]):
+            print(f"No new data received since last clear... Skipping data send...")
+            return True
+
+        print(f"Finding LoRa serial device...")
+        # Now we need to send the JSON data to the serial device connected (LoRa Sender).
+        ports = []
+
+        while ports is None or len(ports) <= 0:
+            ports = list(serial.tools.list_ports.comports())
+            for idx, port in enumerate(ports):
+                # Make sure to ignore Android/SAMSUNG devices... 
+                if "SAMSUNG" in str(port):
+                    ports.pop(idx)
+        ports = sorted(ports, key=lambda p: str(p))
+        port = ports[0]
+
+        print(f"Detected serial device on port: '{port}'...")
+        serial_device = serial.Serial(port[0], 9600, timeout=2.5)
+        
+        # The separators argument makes sure that the final output JSON is ideally very slim
+        # (aka it strips off extra whitespace on lists and key/value pairs).
+        json_dump = json.dumps(combinedScoutingData, separators=(',', ':'))
+        
+        packet = json_dump.encode('ascii')
+        
+        print(f"{json_dump=}")
+        print(f"Packet Size: {len(packet)}")
+
+        serial_device.write(packet + b"\x00\xFF\x32\x84\xFF\x00")
+
+        with open(self.cache_path, "w+") as f:
+            json.dump(self.cachedScoutingData, f)
+
+        return True
+
+    def wipe(self) -> bool:
+        # Acquire the lock so it gets deleted properly
+        with self.event_lock:
+            self.perDeviceScoutingData = {}
+            time.sleep(0.5)
+        return True
+
+    def clear(self) -> bool:
+        # Once again, grab the event lock so that way we can safely delete the cache
+        with self.event_lock:
+            self.cachedScoutingData.clear()
+            with open(self.cache_path, "w+") as f:
+                json.dump(self.cachedScoutingData, f)
+        
+        return True
+
+    def stop(self):
+        self._stop_event.set()
+
+    def stopped(self):
+        return self._stop_event.is_set()
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--host", type=str, default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=5037)
+    parser.add_argument("--debug", action="store_true", default=False)
+    parser.add_argument("--device-path", type=str, default="/storage/emulated/0/Download/Robot Scouter/RadioScout.json")
+
+    args = parser.parse_args()
+
+    if args.debug:
+        print(f"Setting ppadb to debug mode...")
+        logging.getLogger("ppadb").setLevel(logging.DEBUG)
+
+
+    print(f"Initializing ADB Client...")
+    client = AdbClient(host=args.host, port=args.port)
+
+    try:
+        client.devices()
+    except RuntimeError as err:
+        # We have to do the funky cast to a string in order to actually get the error message.
+        # It's kinda wonky but lol python
+        if ("The remote computer refused the network connection" in str(err)):
+            yn = input(f"ADB is not running... Please start ADB or type Y: ").strip()
+            if yn.lower() == "y":
+                os.system(f"adb start-server")
+            else:
+                return
+    
+    # Start the background task that repeatedly monitors all devices attached.
+    backgroundWatcher: BackgroundADBWatcher = BackgroundADBWatcher(client=client, export_path=args.device_path)
+    backgroundWatcher.start()
+    
+    command: str = input(_ARGUMENTS_PROMPT).lower()
+
+    while command != "exit":
+        if command == "send":
+            backgroundWatcher.sendViaSerial()
+        elif command == "wipe":
+            backgroundWatcher.wipe()
+        elif command == "clear":
+            backgroundWatcher.clear()
+        else:
+            print(f"Unknown command... Please try again")
+            time.sleep(0.25)
+        
+        command = input(_ARGUMENTS_PROMPT).lower()
+
+
+    print(f"Stopping background watcher thread...")
+    backgroundWatcher.stop()
+    backgroundWatcher.join(timeout=5)
+
+if __name__ == "__main__":
+    # We need to run the main thread asynchronously so that way we can poll each device on the USB bus individually.
+    main()

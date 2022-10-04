@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="UnusedIds">
+
+    <!-- The group ids are needed for the line separator to appear. -->
+    <group android:id="@+id/one">
+        <item
+            android:id="@+id/action_export_all_teams"
+            android:icon="@drawable/ic_import_export_colorable_24dp"
+            android:title="@string/export_all_teams_title" />
+    </group>
+
+    <group android:id="@+id/one">
+        <item
+            android:id="@+id/action_serial_export_all_teams"
+            android:icon="@drawable/ic_import_export_colorable_24dp"
+            android:title="@string/export_serial_title" />
+    </group>
+
+    <group android:id="@+id/two">
+        <item
+            android:id="@+id/action_view_trash"
+            android:icon="@drawable/ic_delete_colorable_24dp"
+            android:title="@string/trash_activity_title" />
+    </group>
+
+    <group android:id="@+id/three">
+        <item
+            android:id="@+id/action_donate_patreon"
+            android:icon="@drawable/ic_donate_grey_24dp"
+            android:title="@string/donate_patreon_title" />
+
+        <item
+            android:id="@+id/action_settings"
+            android:icon="@drawable/ic_settings_colorable_24dp"
+            android:title="@string/settings_activity_title" />
+    </group>
+
+</menu>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#2A56C6</color>
+    <color name="colorPrimaryDark">#1C3AA9</color>
+    <color name="colorAccent">#FF4081</color>
+
+    <!-- Palette -->
+    <color name="night_black">@android:color/black</color>
+    <color name="night_grey">@color/material_grey_600</color>
+    <color name="light_grey">#CFCFCF</color>
+    <color name="light_grey_text">#9B9B9B</color>
+    <color name="notice_grey">@color/material_grey_300</color>
+    <color name="off_white">#E1E1E1</color>
+    <color name="pale_blue">#463971FF</color>
+    <color name="pale_white">#DCF1F1F1</color>
+
+    <color name="material_grey_700">#616161</color>
+    <color name="material_red_500">#F44336</color>
+
+    <!-- Uses -->
+    <color name="bottom_app_bar">@android:color/white</color>
+
+    <color name="list_item_normal">@android:color/white</color>
+    <color name="list_divider">@color/off_white</color>
+
+    <color name="selected_list_item">@color/pale_blue</color>
+    <color name="selected_toolbar">@color/material_grey_700</color>
+    <color name="selected_status_bar">@color/material_grey_800</color>
+    <color name="selected_icon">@color/selected_toolbar</color>
+
+    <color name="delete_background">@color/material_red_500</color>
+
+    <color name="shortcut_background">@color/material_grey_100</color>
+</resources>

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <ImageButton
+        android:id="@+id/decrement"
+        style="@style/Widget.AppCompat.Button.Colored"
+        android:layout_width="@dimen/square_view_hw"
+        android:layout_height="@dimen/square_view_hw"
+        android:layout_gravity="center_vertical"
+        android:contentDescription="@string/accessibility_decrement_counter"
+        android:stateListAnimator="@null"
+        app:srcCompat="@drawable/ic_remove_colorable_24dp"
+        tools:ignore="UnusedAttribute" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/countContainer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:paddingStart="@dimen/spacing_large"
+        android:paddingEnd="@dimen/spacing_large"
+        android:clipToPadding="false"
+        android:minHeight="@dimen/square_view_hw">
+
+        <androidx.emoji.widget.EmojiAppCompatTextView
+            android:id="@+id/count1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxWidth="68dp"
+            android:textIsSelectable="false"
+            android:textSize="18sp"
+            android:textStyle="normal|bold"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constrainedHeight="true"
+            tools:text="10" />
+
+        <!-- Used for animations -->
+        <androidx.emoji.widget.EmojiAppCompatTextView
+            android:id="@+id/count2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxWidth="68dp"
+            android:textIsSelectable="false"
+            android:textSize="18sp"
+            android:textStyle="normal|bold"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constrainedHeight="true" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <ImageButton
+        android:id="@+id/increment"
+        style="@style/Widget.AppCompat.Button.Colored"
+        android:layout_width="@dimen/square_view_hw"
+        android:layout_height="@dimen/square_view_hw"
+        android:layout_gravity="center_vertical"
+        android:contentDescription="@string/accessibility_increment_counter"
+        android:stateListAnimator="@null"
+        app:srcCompat="@drawable/ic_add_colorable_24dp"
+        tools:ignore="UnusedAttribute" />
+
+</merge>

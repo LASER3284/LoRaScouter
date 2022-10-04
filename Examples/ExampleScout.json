@@ -1,0 +1,126 @@
+{
+  "teams": {
+    "3284": [
+      {
+        "name": null,
+        "timestamp": 1664328568510,
+        "metrics": {
+          "3Oh5EkaC4DZSZtfpTFrr": {
+            "type": "boolean",
+            "name": "Taxi",
+            "value": true,
+            "category": null
+          },
+          "SL9Fqc4TDyqzC0aYU8sN": {
+            "type": "number",
+            "name": "Low Goal",
+            "value": 2,
+            "category": null
+          },
+          "9UmBrGpEVZWYFSYvHFux": {
+            "type": "number",
+            "name": "High Goal",
+            "value": 1,
+            "category": null
+          },
+          "s8V6zpuqgW13QvkW8Jso": {
+            "type": "number",
+            "name": "Total",
+            "value": 4,
+            "category": null
+          }
+        }
+      },
+      {
+        "name": null,
+        "timestamp": 1664328602728,
+        "metrics": {
+          "3Oh5EkaC4DZSZtfpTFrr": {
+            "type": "boolean",
+            "name": "Taxi",
+            "value": true,
+            "category": null
+          },
+          "SL9Fqc4TDyqzC0aYU8sN": {
+            "type": "number",
+            "name": "Low Goal",
+            "value": 0,
+            "category": null
+          },
+          "9UmBrGpEVZWYFSYvHFux": {
+            "type": "number",
+            "name": "High Goal",
+            "value": 4,
+            "category": null
+          },
+          "s8V6zpuqgW13QvkW8Jso": {
+            "type": "number",
+            "name": "Total",
+            "value": 5,
+            "category": null
+          }
+        }
+      },
+      {
+        "name": null,
+        "timestamp": 1664328612002,
+        "metrics": {
+          "3Oh5EkaC4DZSZtfpTFrr": {
+            "type": "boolean",
+            "name": "Taxi",
+            "value": true,
+            "category": null
+          },
+          "SL9Fqc4TDyqzC0aYU8sN": {
+            "type": "number",
+            "name": "Low Goal",
+            "value": 0,
+            "category": null
+          },
+          "9UmBrGpEVZWYFSYvHFux": {
+            "type": "number",
+            "name": "High Goal",
+            "value": 1,
+            "category": null
+          },
+          "s8V6zpuqgW13QvkW8Jso": {
+            "type": "number",
+            "name": "Total",
+            "value": 0,
+            "category": null
+          }
+        }
+      },
+      {
+        "name": null,
+        "timestamp": 1664328620058,
+        "metrics": {
+          "3Oh5EkaC4DZSZtfpTFrr": {
+            "type": "boolean",
+            "name": "Taxi",
+            "value": true,
+            "category": null
+          },
+          "SL9Fqc4TDyqzC0aYU8sN": {
+            "type": "number",
+            "name": "Low Goal",
+            "value": 0,
+            "category": null
+          },
+          "9UmBrGpEVZWYFSYvHFux": {
+            "type": "number",
+            "name": "High Goal",
+            "value": 0,
+            "category": null
+          },
+          "s8V6zpuqgW13QvkW8Jso": {
+            "type": "number",
+            "name": "Total",
+            "value": 4,
+            "category": null
+          }
+        }
+      }
+    ]
+  }
+}

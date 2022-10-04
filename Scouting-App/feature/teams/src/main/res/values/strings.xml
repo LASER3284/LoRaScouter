@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="team_new_number_hint">Team number</string>
+    <string name="team_export_title">Export teams</string>
+    <string name="team_tutorial_no_teams_hint">Teams you add appear here</string>
+
+    <string name="team_unknown_team_title">Unknown</string>
+    <plurals name="teams_deleted_message">
+        <item quantity="one">Team deleted</item>
+        <item quantity="other">%s teams deleted</item>
+    </plurals>
+
+    <string name="team_select_all_title">Select all</string>
+    <string name="team_multiple_selected_message">Multiple teams selected</string>
+
+    <string name="tutorial_create_first_team_title">Create your first team</string>
+    <string name="tutorial_sign_in_title">Sign in</string>
+    <string name="tutorial_sign_in_rationale">
+        Signing in lets you easily sync data with other devices across your team.
+    </string>
+</resources>

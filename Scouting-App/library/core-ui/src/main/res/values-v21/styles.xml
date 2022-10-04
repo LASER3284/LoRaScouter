@@ -1,0 +1,25 @@
+<resources>
+
+    <style name="RobotScouter.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+    </style>
+
+    <style name="RobotScouter.NoActionBar.TransparentStatusBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="RobotScouter.ListItem">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:elevation">@dimen/card_elevation</item>
+        <item name="android:paddingStart">@dimen/list_item_padding_horizontal</item>
+        <item name="android:paddingEnd">@dimen/list_item_padding_horizontal</item>
+        <item name="android:paddingTop">@dimen/list_item_padding_vertical_within</item>
+        <item name="android:paddingBottom">@dimen/list_item_padding_vertical_within</item>
+        <item name="android:background">@drawable/card_item_background</item>
+        <item name="android:focusableInTouchMode">true</item>
+    </style>
+
+</resources>

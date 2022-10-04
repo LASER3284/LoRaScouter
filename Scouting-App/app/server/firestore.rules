@@ -1,0 +1,130 @@
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /default-templates/{sub=**} {
+      allow read;
+    }
+
+    match /teams/{teamId} {
+      function isExistingOwner() {
+        return request.auth.uid in resource.data.owners;
+      }
+      function isValidTeam() {
+        return request.resource.data.number is int
+                 && request.resource.data.owners[request.auth.uid] is int
+                 && request.resource.data.templateId is string
+                 && request.resource.data.hasCustomName is bool
+                 && request.resource.data.hasCustomMedia is bool
+                 && request.resource.data.hasCustomWebsite is bool
+                 && request.resource.data.mediaYear is int
+                 && request.resource.data.timestamp is timestamp;
+      }
+
+      allow get: if resource == null || isExistingOwner();
+      allow list: if isExistingOwner();
+      allow create: if isValidTeam();
+      allow update: if isExistingOwner() && isValidTeam();
+      allow delete: if isExistingOwner();
+
+      match /scouts/{scoutId} {
+        function isScoutOwner() {
+          return request.auth.uid in get(/databases/$(database)/documents/teams/$(teamId)).data.owners;
+        }
+
+        allow get: if resource == null || isScoutOwner();
+        allow list: if isScoutOwner();
+        allow create, update: if isScoutOwner() && isValidScout();
+        allow delete: if isScoutOwner();
+
+        match /metrics/{metricId} {
+          allow get: if resource == null || isScoutOwner();
+          allow list: if isScoutOwner();
+          allow create, update: if isScoutOwner() && isValidMetric();
+          allow delete: if isScoutOwner();
+        }
+      }
+    }
+
+    match /templates/{templateId} {
+      function isExistingOwner() {
+        return request.auth.uid in resource.data.owners;
+      }
+      function isValidTemplate() {
+        return request.resource.data.owners[request.auth.uid] is timestamp && isValidScout();
+      }
+
+      allow get: if resource == null || isExistingOwner();
+      allow list: if isExistingOwner();
+      allow create: if isValidTemplate();
+      allow update: if isExistingOwner() && isValidTemplate();
+      allow delete: if isExistingOwner();
+
+      match /metrics/{metricId} {
+        function isTemplateOwner() {
+          return request.auth.uid in get(/databases/$(database)/documents/templates/$(templateId)).data.owners;
+        }
+
+        allow read: if isTemplateOwner();
+        allow create, update: if isTemplateOwner() && isValidMetric();
+        allow delete: if isTemplateOwner();
+      }
+    }
+
+    match /users/{uid} {
+      function isOwner() {
+        return uid == request.auth.uid
+      }
+
+      allow read, write: if isOwner();
+
+      match /prefs {
+        match /{pref} {
+          allow read, delete: if isOwner();
+        }
+
+        match /defaultTemplateId {
+          allow create, update: if isOwner() && request.resource.data.value is string;
+        }
+
+        match /nightMode {
+          allow create, update: if isOwner() && request.resource.data.value in ["auto", "yes", "no"];
+        }
+
+        match /lockTemplates {
+          allow create, update: if isOwner() && request.resource.data.value is bool;
+        }
+
+        match /uploadMediaToTba {
+          allow create, update: if isOwner() && request.resource.data.value in ["ask", "yes", "no"];
+        }
+
+        match /hasShownAddTeamTutorial {
+          allow create, update: if isOwner() && request.resource.data.value is bool;
+        }
+
+        match /hasShownSignInTutorial {
+          allow create, update: if isOwner() && request.resource.data.value is bool;
+        }
+
+        match /shouldShowRatingDialog {
+          allow create, update: if isOwner() && request.resource.data.value is bool;
+        }
+      }
+    }
+
+    match /duplicate-teams/{uid} {
+      allow write: if uid == request.auth.uid;
+    }
+
+    match /deletion-queue/{uid} {
+      allow read, write: if uid == request.auth.uid;
+    }
+  }
+}
+
+function isValidScout() {
+  return request.resource.data.templateId is string && request.resource.data.timestamp is timestamp;
+}
+
+function isValidMetric() {
+  return request.resource.data.type in [0, 1, 2, 3, 4, 5] && request.resource.data.position is int;
+}

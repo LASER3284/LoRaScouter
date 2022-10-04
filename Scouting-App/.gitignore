@@ -1,0 +1,14 @@
+*.iml
+.gradle
+.idea/*
+build
+!**/src/**/build
+node_modules
+.firebase
+/local.properties
+
+*keystore.properties
+google-*.json
+*.jks
+config.xml
+!ci-dummies/*.*
