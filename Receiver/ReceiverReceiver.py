@@ -57,6 +57,9 @@ def main():
                     hex_data = " ".join([hex(byte) for byte in data])
                     print(f"Received data (length: {len(data)}): {data} :: {hex_data}")
                     
+                    if len(data) <= len(_SCOUTING_PACKET_EOF):
+                        continue
+
                     json_data = json.loads(data.decode('ascii'))
                     handleScoutingData(json_data)
                 time.sleep(1.25)
