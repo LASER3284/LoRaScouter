@@ -6,6 +6,7 @@ This is the official code release for our [LoRa](https://lora-alliance.org/) bas
 
 The main setup is like so:
 - The stands (scouters) have modified versions of SUPERCILEX's [Robot-Scouter](https://github.com/SUPERCILEX/Robot-Scouter) app installed onto their phones (or a school/team provided device). The main difference is that our fork of it adds in a custom export feature that exports all scouting data to one JSON file.
+  * We chose this app because it was what our scouters were already familiar with as well as it's additional features (exporting/etc) will allow us to have a good backup in the event something breaks.
 - These stands then plug into a laptop running in the stands running the `SenderSender.py` python script inside the `Sender` folder.
   * This script uses [ADB](https://developer.android.com/studio/command-line/adb) in order to pull the exported JSON file from the scouting devices. 
   * Then it combines all of this scouting data into one JSON file that is minified and sent via serial to the main LoRa sender device.
@@ -18,6 +19,6 @@ The main setup is like so:
 - Then, attached to your driver station (or wherever), this data is received by another BSFrance LoRa32u4 II module running the `Receiver/Receiver.ino` Arduino program.
    * This script more or less operates in the same process as the sender, but in reverse; This script practically just sends the data to the host PC via Serial as soon as it receives it (usually every other 500ms).
 - This driver station/pit laptop is running the `Driver_Station/ReceiverReceiver.py` (you'll notice a trend with the naming), which automatically monitors the serial port.
-   * NOTE: If you decide to attach this to your driver station laptop, please note that under the rules, you *cannot* have any form of wireless communication at the field itself. It's advised to just unplug the LoRa module from your laptop entirely.
+   * NOTE: If you decide to attach this to your driver station laptop, please note that under the rules, you *cannot* have any form of wireless communication at the field itself. We advise that you just unplug the LoRa module from your laptop entirely (or leave it in the pits).
    * This python script automatically monitors the serial ports (at 9600 baud rate), reading data until it sees that same EOF structure from earlier.
    * Then this JSON data can be custom processed and loaded through the power of LoRa!
