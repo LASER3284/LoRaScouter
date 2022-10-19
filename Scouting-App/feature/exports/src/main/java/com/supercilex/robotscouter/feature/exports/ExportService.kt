@@ -49,12 +49,19 @@ import kotlinx.coroutines.tasks.asTask
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
 import java.io.File
+import java.io.OutputStreamWriter
+import java.io.BufferedWriter
+import java.io.BufferedOutputStream
 import java.util.concurrent.TimeUnit
 import com.supercilex.robotscouter.R as RC
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
+
+
+import com.supercilex.robotscouter.core.data.safeCreateNewFile
+import java.io.FileWriter
 
 @Bridge
 class ExportService : IntentService(TAG) {
@@ -136,12 +143,6 @@ class ExportService : IntentService(TAG) {
                 rootDir.mkdirs();
             }
 
-            val JSONFile = File(rootDir, "RadioScout.json")
-            // Delete the radio scouting JSON file if it exists
-            if(JSONFile.exists()) {
-                JSONFile.delete();
-            }
-
             val json_elements = runBlocking {
                 val templateNames = getTemplateNames(zippedScouts.keys)
                 withTimeout(TimeUnit.MINUTES.toMillis(5)) {
@@ -167,7 +168,31 @@ class ExportService : IntentService(TAG) {
 
 
             val gson = GsonBuilder().setPrettyPrinting().serializeNulls().disableHtmlEscaping().create()
-            JSONFile.writeText(gson.toJson(json_elements))
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val resolver = RobotScouter.contentResolver
+                val contentValues = ContentValues();
+                contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, "RadioScout");
+                contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "application/json");
+                contentValues.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Robot Scouter");
+                val imageUri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues);
+                if(imageUri == null) {
+                    throw Exception()
+                }
+
+                val fos = resolver.openOutputStream(imageUri);
+                OutputStreamWriter(fos, Charsets.UTF_8).use { osw ->
+                    BufferedWriter(osw).use { bf -> bf.write(gson.toJson(json_elements)) }
+                }
+            }
+            else {
+                val JSONFile = File(rootDir, "RadioScout.json")
+                if(JSONFile.exists()) {
+                    JSONFile.delete();
+                }
+                JSONFile.writeText(gson.toJson(json_elements))
+            }
+
             return
         }
 

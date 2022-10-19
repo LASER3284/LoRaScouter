@@ -12,7 +12,7 @@ import serial.tools.list_ports
 from typing import Any, Dict, List, Union
 from ppadb.client import Client as AdbClient
 
-_ARGUMENTS_PROMPT = f"Enter a command to run\n\t- `send`: Send the data to the LoRa to send to the pits\n\t- `wipe`: Wipe all cached device data\n\t- `clear`: Clear all total known event data\n\t- `exit`: Exit the scouting program...\n"
+_ARGUMENTS_PROMPT = f"Enter a command to run\n\t- `send`: Send the data to the LoRa to send to the pits\n\t- `save`: Save the full scouting data for importing onto the receiver station.\n\t- `wipe`: Wipe all cached device data\n\t- `clear`: Clear all total known event data\n\t- `exit`: Exit the scouting program...\n"
 
 class BackgroundADBWatcher(threading.Thread):
     """A simple background task that monitors ADB devices on the USB and updates the scouting dictionary."""
@@ -76,6 +76,58 @@ class BackgroundADBWatcher(threading.Thread):
                 # See above comment
                 traceback.print_exc()
                 time.sleep(1.5)
+
+    def saveToDisk(self) -> bool:
+       # Acquire the lock so that way we can make sure we merge everything properly
+        with self.event_lock:
+            # { "teams": { "Team": [{"metric": "value"}], "template": { "metric_id" : "metric_name" } }
+            combinedScoutingData: Dict[str, Dict[str, Union[List[Dict[str, Union[str, bool, int, float]]], str]]] = {
+                "teams": {},
+                "template": {}
+            }
+            
+            metricMapping: Dict[str, str] = {}
+
+            for idx, (device_serial, spare) in enumerate(self.perDeviceScoutingData.items()):
+                print(f"[{idx+1}] Combining Scouting Data...")
+                for team, scouts in spare['teams'].items():
+                    print(f"\t[{idx+1}] Handling Team #{team}")
+
+                    shortened_team_scout: List[Dict[str, Union[str, bool, int, float]]] = []
+                    
+                    for scout in scouts:
+                        scout_hash = hashlib.md5(json.dumps(scout).encode('ascii')).hexdigest()
+                        if scout_hash in self.cachedScoutingData:
+                            continue
+
+                        shortened_match_scout: Dict[str, Union[str, bool, int, float]] = {}
+                        # We need to use the metric ID so that way it doesn't overwrite in the JSON
+                        for metric_id, metric in scout['metrics'].items():
+                            # Add the metric ID to the metric mapping if it's not there
+                            if metric_id not in metricMapping.keys():
+                                metricMapping.update({ metric_id : metric['name']})
+                            # Update the match scout with the metric ID to value
+                            # This is mainly to remove various junk that I don't care about
+                            shortened_match_scout.update({ metric_id : metric['value'] })
+                        
+                        # Add the match scout to the team scout list
+                        shortened_team_scout.append(shortened_match_scout)
+                        
+                        self.cachedScoutingData.append(scout_hash)
+                    
+                    # If the team hasn't already been scouted by another device, *add* it to the dictionary
+                    # If the team has been scouted by another device, append to that team's scout list rather than overwriting the dictionary.
+                    if team not in combinedScoutingData:
+                        combinedScoutingData['teams'].update({team : shortened_team_scout})
+                    else:
+                        combinedScoutingData['teams'][team] += shortened_team_scout  # type: ignore
+            
+            combinedScoutingData['template'] = metricMapping # type: ignore
+
+            with open(os.path.join(os.path.dirname(self.cache_path), "saved_scouts.json"), "w+") as f:
+                json.dump(combinedScoutingData, f, indent=4)
+
+        return True
 
     def sendViaSerial(self) -> bool:
         # Acquire the lock so that way we can make sure we merge everything properly
@@ -223,6 +275,8 @@ def main():
     while command != "exit":
         if command == "send":
             backgroundWatcher.sendViaSerial()
+        elif command == "save":
+            backgroundWatcher.saveToDisk()
         elif command == "wipe":
             backgroundWatcher.wipe()
         elif command == "clear":

@@ -17,7 +17,7 @@ _COMBINED_SCOUTING_CSV = "./combined_scouts.csv"
 
 def handleScoutingData(data: Dict[str, Dict[str, Union[List[Dict[str, Union[str, bool, int, float]]], str]]]):
     print(f"Received new scout data...")
-    combined_scouts: Dict[str, Dict[str, Union[List[Dict[str, Union[str, bool, int, float]]], str]]] = {"teams": {}}
+    combined_scouts: Dict[str, Dict[str, Union[List[Dict[str, Union[str, bool, int, float]]], str]]] = {"teams": {}, "template": {}}
     if os.path.exists(_COMBINED_SCOUTING_JSON):
         with open(_COMBINED_SCOUTING_JSON, "r+") as f:
             combined_scouts = json.load(f)
@@ -31,9 +31,9 @@ def handleScoutingData(data: Dict[str, Dict[str, Union[List[Dict[str, Union[str,
                 if scout_hash in hashes:
                     continue
             
-                combined_scouts["teams"][team].append(scout)
+                combined_scouts["teams"][team].append(scout) # type: ignore
             else:
-                combined_scouts["teams"].update({ team : [scout]})
+                combined_scouts["teams"].update({ team : [scout]}) # type: ignore
     
     if "template" not in combined_scouts and "template" in data:
         combined_scouts["template"] = data["template"]
@@ -49,7 +49,7 @@ def handleScoutingData(data: Dict[str, Dict[str, Union[List[Dict[str, Union[str,
             for scout in scouts:
                 # This is mainly just to guarantee that the CSV rows have the same order as the header.
                 # In theory, it always should, but it can't really hurt.
-                ordered_values = [scout[x] for x in combined_scouts["template"].keys()]
+                ordered_values = [scout[x] for x in combined_scouts["template"].keys()] # type: ignore
                 writer.writerow([team, *ordered_values])
 
 

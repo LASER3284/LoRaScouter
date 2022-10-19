@@ -184,7 +184,7 @@ internal class TemplateExporter(
 
 
 
-    private fun insertFileIntoMediaStore(file: File): Pair<File, Uri> {
+    public fun insertFileIntoMediaStore(file: File): Pair<File, Uri> {
         if (Build.VERSION.SDK_INT < 29) {
             return file to FileProvider.getUriForFile(RobotScouter, providerAuthority, file)
         }

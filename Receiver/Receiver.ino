@@ -9,7 +9,7 @@
 #define SS      8
 #define RST     4
 #define DI0     7
-#define BAND    868E6  // 915E6
+#define BAND    915E6
 #define PABOOST true 
 
 
