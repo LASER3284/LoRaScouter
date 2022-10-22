@@ -17,14 +17,14 @@ _COMBINED_SCOUTING_CSV = "./combined_scouts.csv"
 
 def handleScoutingData(data: Dict[str, Dict[str, Union[List[Dict[str, Union[str, bool, int, float]]], str]]]):
     print(f"Received new scout data...")
-    combined_scouts: Dict[str, Dict[str, Union[List[Dict[str, Union[str, bool, int, float]]], str]]] = {"teams": {}, "template": {}}
+    combined_scouts: Dict[str, Dict[str, Union[List[Dict[str, Union[str, bool, int, float]]], str]]] = {"teams": {}}
     if os.path.exists(_COMBINED_SCOUTING_JSON):
         with open(_COMBINED_SCOUTING_JSON, "r+") as f:
             combined_scouts = json.load(f)
 
     for team, scouts in data['teams'].items():
         for scout in scouts:
-            scout_hash = hashlib.md5(json.dumps(scout).encode('ascii')).hexdigest()
+            scout_hash = hashlib.md5(json.dumps(scout).encode('utf-8')).hexdigest()
             if team in combined_scouts["teams"]:
                 hashes = [hashlib.md5(json.dumps(s).encode('ascii')).hexdigest() for s in combined_scouts["teams"][team]]
                 # It looks like we already have this match data scouted, skip it
@@ -41,7 +41,7 @@ def handleScoutingData(data: Dict[str, Dict[str, Union[List[Dict[str, Union[str,
     with open(_COMBINED_SCOUTING_JSON, "w+") as f:
         json.dump(combined_scouts, f, indent=4)
 
-    with open(_COMBINED_SCOUTING_CSV, "w+", newline='') as f:
+    with open(_COMBINED_SCOUTING_CSV, "w+", newline='', encoding="utf-8") as f:
         writer = csv.writer(f, quoting=csv.QUOTE_ALL)
         writer.writerow(['Team Number', *[value for value in combined_scouts["template"].values()]])
         
