@@ -85,8 +85,11 @@ class BackgroundADBWatcher(threading.Thread):
                 "teams": {},
                 "template": {}
             }
-            
             metricMapping: Dict[str, str] = {}
+
+            if os.path.exists(os.path.join(os.path.dirname(self.cache_path), "saved_scouts.json")):
+                combinedScoutingData = json.load(open(os.path.join(os.path.dirname(self.cache_path), "saved_scouts.json")))
+                metricMapping = combinedScoutingData["template"] # type: ignore
 
             for idx, (device_serial, spare) in enumerate(self.perDeviceScoutingData.items()):
                 print(f"[{idx+1}] Combining Scouting Data...")
@@ -96,28 +99,37 @@ class BackgroundADBWatcher(threading.Thread):
                     shortened_team_scout: List[Dict[str, Union[str, bool, int, float]]] = []
                     
                     for scout in scouts:
-                        scout_hash = hashlib.md5(json.dumps(scout).encode('ascii')).hexdigest()
-                        if scout_hash in self.cachedScoutingData:
-                            continue
-
                         shortened_match_scout: Dict[str, Union[str, bool, int, float]] = {}
                         # We need to use the metric ID so that way it doesn't overwrite in the JSON
                         for metric_id, metric in scout['metrics'].items():
+                            # Force metrics with the same name to have the same metric id
+                            if metric['name'] in metricMapping.values():
+                                metric_id = list(metricMapping.keys())[list(metricMapping.values()).index(metric['name'])]
                             # Add the metric ID to the metric mapping if it's not there
-                            if metric_id not in metricMapping.keys():
+                            elif metric_id not in metricMapping.keys():
                                 metricMapping.update({ metric_id : metric['name']})
                             # Update the match scout with the metric ID to value
                             # This is mainly to remove various junk that I don't care about
                             shortened_match_scout.update({ metric_id : metric['value'] })
                         
+                        # We need to check the shortened match scout due to the way the file is saved
+                        scout_hash = hashlib.md5(json.dumps(shortened_match_scout).encode('ascii')).hexdigest()
+                        duplicated = False
+
+                        for t, t_s in combinedScoutingData['teams'].items():
+                            hashes = [hashlib.md5(json.dumps(s).encode('ascii')).hexdigest() for s in t_s]
+                            if scout_hash in hashes:
+                                duplicated = True
+                                break
+                        if duplicated:
+                            continue
+                        
                         # Add the match scout to the team scout list
                         shortened_team_scout.append(shortened_match_scout)
-                        
-                        self.cachedScoutingData.append(scout_hash)
-                    
+                                            
                     # If the team hasn't already been scouted by another device, *add* it to the dictionary
                     # If the team has been scouted by another device, append to that team's scout list rather than overwriting the dictionary.
-                    if team not in combinedScoutingData:
+                    if team not in combinedScoutingData['teams']:
                         combinedScoutingData['teams'].update({team : shortened_team_scout})
                     else:
                         combinedScoutingData['teams'][team] += shortened_team_scout  # type: ignore
@@ -155,11 +167,15 @@ class BackgroundADBWatcher(threading.Thread):
                         shortened_match_scout: Dict[str, Union[str, bool, int, float]] = {}
                         # We need to use the metric ID so that way it doesn't overwrite in the JSON
                         for metric_id, metric in scout['metrics'].items():
+                            # Force metrics with the same name to have the same metric id
+                            if metric['name'] in metricMapping.values():
+                                metric_id = list(metricMapping.keys())[list(metricMapping.values()).index(metric['name'])]
                             # Add the metric ID to the metric mapping if it's not there
-                            if metric_id not in metricMapping.keys():
+                            elif metric_id not in metricMapping.keys():
                                 metricMapping.update({ metric_id : metric['name']})
+                            
                             # Update the match scout with the metric ID to value
-                            # This is mainly to remove various junk that I don't care about
+                            # This is mainly to remove various junk that we don't care about
                             shortened_match_scout.update({ metric_id : metric['value'] })
                         
                         # Add the match scout to the team scout list
@@ -169,7 +185,7 @@ class BackgroundADBWatcher(threading.Thread):
                     
                     # If the team hasn't already been scouted by another device, *add* it to the dictionary
                     # If the team has been scouted by another device, append to that team's scout list rather than overwriting the dictionary.
-                    if team not in combinedScoutingData:
+                    if team not in combinedScoutingData['teams']:
                         combinedScoutingData['teams'].update({team : shortened_team_scout})
                     else:
                         combinedScoutingData['teams'][team] += shortened_team_scout  # type: ignore

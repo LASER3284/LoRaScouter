@@ -58,8 +58,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
-
-
+import android.content.ContentUris
 import com.supercilex.robotscouter.core.data.safeCreateNewFile
 import java.io.FileWriter
 
@@ -171,16 +170,39 @@ class ExportService : IntentService(TAG) {
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val resolver = RobotScouter.contentResolver
-                val contentValues = ContentValues();
-                contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, "RadioScout");
-                contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "application/json");
-                contentValues.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Robot Scouter");
-                val imageUri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues);
-                if(imageUri == null) {
+
+                val contentUri = MediaStore.Downloads.EXTERNAL_CONTENT_URI;
+                val selection = MediaStore.MediaColumns.RELATIVE_PATH + "=?"
+                val selectionArgs = arrayOf<String>(Environment.DIRECTORY_DOWNLOADS + "/Robot Scouter/")
+                val cursor = resolver.query(contentUri, null, selection, selectionArgs, null)
+                var uri: Uri? = null
+                if (cursor?.getCount() != 0) {
+                    while (cursor?.moveToNext() == true) {
+                        val fileName = cursor.getString(cursor.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME))
+
+                        if (fileName.equals("RadioScout.json")) {
+                            val id = cursor.getLong(cursor.getColumnIndex(MediaStore.MediaColumns._ID))
+
+                            uri = ContentUris.withAppendedId(contentUri, id)
+
+                            break
+                        }
+                    }
+                }
+
+                if(uri == null) {
+                    val contentValues = ContentValues();
+                    contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, "RadioScout");
+                    contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "application/json");
+                    contentValues.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Robot Scouter");
+                    uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues);
+                }
+
+                if(uri == null) {
                     throw Exception()
                 }
 
-                val fos = resolver.openOutputStream(imageUri);
+                val fos = resolver.openOutputStream(uri, "rwt");
                 OutputStreamWriter(fos, Charsets.UTF_8).use { osw ->
                     BufferedWriter(osw).use { bf -> bf.write(gson.toJson(json_elements)) }
                 }
