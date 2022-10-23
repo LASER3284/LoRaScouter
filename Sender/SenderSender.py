@@ -39,15 +39,17 @@ class BackgroundADBWatcher(threading.Thread):
 
     """Runs the task that monitors ADB devices"""
     def run(self, *args, **kwargs):
+        found_devices: List[str] = []
         while not self.stopped():
             try:
                 devices = self.client.devices()
 
                 with self.event_lock:
                     for device in devices:
-                        # If we've already 
-                        if device.serial not in self.perDeviceScoutingData.keys():
+                        # If we've already found the device, just skip printing info on it
+                        if device.serial not in found_devices:
                             print(f"Discovered device: {device.serial}")
+                            found_devices.append(device.serial)
 
                         result = device.shell(f'cat \"{self.export_path}\"').strip()
                         
@@ -57,7 +59,11 @@ class BackgroundADBWatcher(threading.Thread):
                         except ValueError:
                             # json.loads(...) will throw a value error if the JSON is malformed or if the JSON doesn't exist
                             continue
-
+                    # Remove the device if it gets disconnected
+                    for serial in found_devices:
+                        if serial not in [d.serial for d in devices]:
+                            found_devices.remove(serial)
+                
                 time.sleep(1.5)
             except RuntimeError as err:
                 # We have to do the funky cast to a string in order to actually get the error message.
