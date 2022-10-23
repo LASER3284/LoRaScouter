@@ -26,7 +26,7 @@ def handleScoutingData(data: Dict[str, Dict[str, Union[List[Dict[str, Union[str,
         for scout in scouts:
             scout_hash = hashlib.md5(json.dumps(scout).encode('utf-8')).hexdigest()
             if team in combined_scouts["teams"]:
-                hashes = [hashlib.md5(json.dumps(s).encode('ascii')).hexdigest() for s in combined_scouts["teams"][team]]
+                hashes = [hashlib.md5(json.dumps(s).encode('utf-8')).hexdigest() for s in combined_scouts["teams"][team]]
                 # It looks like we already have this match data scouted, skip it
                 if scout_hash in hashes:
                     continue

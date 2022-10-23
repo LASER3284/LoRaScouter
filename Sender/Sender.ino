@@ -15,7 +15,7 @@
 int counter = 0;
 
 String data = "";
-String serialEOF = "\x00\xFF\x32\x84\xFF\x00";
+String serialEOF = "\xFF\x32\x84\xFF";
 
 void setup() {
   Serial.begin(9600);
@@ -36,7 +36,6 @@ void setup() {
 }
 
 void loop() {
-
   if(Serial.available() > 0) {
     // This pretty much builds up the packet until the data ends with the standard EOF
     while(Serial.available()) {
@@ -44,10 +43,9 @@ void loop() {
     }
   }
 
-  if(data.indexOf(serialEOF) != -1) {
-    Serial.print("Received data: '");
-    Serial.print(data);
-    Serial.println("'");
+  if(data.length() >= 128 || data.indexOf(serialEOF) != -1) {
+    Serial.print("Received data :: Length: ");
+    Serial.print(data.length());
 
     int dataIdx = 0;
     int split_count = (data.length() / 128) + (data.length() % 128 > 1 ? 1 : 0);
@@ -59,7 +57,7 @@ void loop() {
       LoRa.beginPacket();
         
       for(int i = 0; i < 128; i++) {
-        if(dataIdx <= data.length()) {
+        if(dataIdx < data.length()) {
           LoRa.write(data.charAt(dataIdx));
           dataIdx++;
         }
@@ -69,11 +67,15 @@ void loop() {
         
       delay(500);      
     }
-
+    Serial.println(data);
     data = "";
 
+    // Clear the serial data
     while(Serial.available()) {
       Serial.read();
     }
+
+    // Send some data back to the serial port so the client knows it exists
+    Serial.write("\xFF\x32\x84\xFF");
   }
 }

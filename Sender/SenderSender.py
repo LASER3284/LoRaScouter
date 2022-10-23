@@ -4,7 +4,6 @@ import time
 import traceback
 import logging
 import json
-import copy
 import threading
 import serial
 import hashlib
@@ -13,18 +12,18 @@ from typing import Any, Dict, List, Union
 from ppadb.client import Client as AdbClient
 
 _ARGUMENTS_PROMPT = f"Enter a command to run\n\t- `send`: Send the data to the LoRa to send to the pits\n\t- `save`: Save the full scouting data for importing onto the receiver station.\n\t- `wipe`: Wipe all cached device data\n\t- `clear`: Clear all total known event data\n\t- `exit`: Exit the scouting program...\n"
+_SCOUTING_EOF = b"\xFF\x32\x84\xFF"
 
 class BackgroundADBWatcher(threading.Thread):
     """A simple background task that monitors ADB devices on the USB and updates the scouting dictionary."""
 
-    # { device.serial : {"teams": { } } }
     perDeviceScoutingData: Dict[str, Dict[str, Dict[str, Any]]] = {}
+    metricMapping: Dict[str, str] = {}
 
     def __init__(self, client: AdbClient, export_path: str, cache_path: str = "./scouting_cache.json"):
         super().__init__()
     
         self.perDeviceScoutingData = {}
-        self.combinedScoutingData = {}
         self.client = client
         self.export_path = export_path
         self.cache_path = cache_path
@@ -35,7 +34,9 @@ class BackgroundADBWatcher(threading.Thread):
         self.cachedScoutingData: List[str] = []
         if os.path.exists(self.cache_path):
             with open(self.cache_path, "r") as f:
-                self.cachedScoutingData = json.load(f)
+                data = json.load(f)
+                self.cachedScoutingData = data['cache']
+                self.metricMapping = data['template']
 
     """Runs the task that monitors ADB devices"""
     def run(self, *args, **kwargs):
@@ -91,11 +92,10 @@ class BackgroundADBWatcher(threading.Thread):
                 "teams": {},
                 "template": {}
             }
-            metricMapping: Dict[str, str] = {}
 
             if os.path.exists(os.path.join(os.path.dirname(self.cache_path), "saved_scouts.json")):
                 combinedScoutingData = json.load(open(os.path.join(os.path.dirname(self.cache_path), "saved_scouts.json")))
-                metricMapping = combinedScoutingData["template"] # type: ignore
+                self.metricMapping = combinedScoutingData["template"] # type: ignore
 
             for idx, (device_serial, spare) in enumerate(self.perDeviceScoutingData.items()):
                 print(f"[{idx+1}] Combining Scouting Data...")
@@ -106,14 +106,19 @@ class BackgroundADBWatcher(threading.Thread):
                     
                     for scout in scouts:
                         shortened_match_scout: Dict[str, Union[str, bool, int, float]] = {}
+                        metric_count = len(list(scout['metrics'].items()))
                         # We need to use the metric ID so that way it doesn't overwrite in the JSON
                         for metric_id, metric in scout['metrics'].items():
+                            # Technically this is playing it risky because the metric ID isn't deterministic
+                            # For now, lets use this solution, the chances of a complete overlap are very low.
+                            metric_id = metric_id[:metric_count // 2]
+
                             # Force metrics with the same name to have the same metric id
-                            if metric['name'] in metricMapping.values():
-                                metric_id = list(metricMapping.keys())[list(metricMapping.values()).index(metric['name'])]
+                            if metric['name'] in self.metricMapping.values():
+                                metric_id = list(self.metricMapping.keys())[list(self.metricMapping.values()).index(metric['name'])]
                             # Add the metric ID to the metric mapping if it's not there
-                            elif metric_id not in metricMapping.keys():
-                                metricMapping.update({ metric_id : metric['name']})
+                            elif metric_id not in self.metricMapping.keys():
+                                self.metricMapping.update({ metric_id : metric['name']})
                             # Update the match scout with the metric ID to value
                             # This is mainly to remove various junk that I don't care about
                             shortened_match_scout.update({ metric_id : metric['value'] })
@@ -156,8 +161,6 @@ class BackgroundADBWatcher(threading.Thread):
                 "template": {}
             }
             
-            metricMapping: Dict[str, str] = {}
-
             for idx, (device_serial, spare) in enumerate(self.perDeviceScoutingData.items()):
                 print(f"[{idx+1}] Combining Scouting Data...")
                 for team, scouts in spare['teams'].items():
@@ -171,15 +174,24 @@ class BackgroundADBWatcher(threading.Thread):
                             continue
 
                         shortened_match_scout: Dict[str, Union[str, bool, int, float]] = {}
+                        metric_count = len(list(scout['metrics'].items()))
                         # We need to use the metric ID so that way it doesn't overwrite in the JSON
                         for metric_id, metric in scout['metrics'].items():
+                            # Technically this is playing it risky because the metric ID isn't deterministic
+                            # For now, lets use this solution, the chances of a complete overlap are very low.
+                            metric_id = metric_id[:metric_count // 2]
+
                             # Force metrics with the same name to have the same metric id
-                            if metric['name'] in metricMapping.values():
-                                metric_id = list(metricMapping.keys())[list(metricMapping.values()).index(metric['name'])]
+                            if metric['name'] in self.metricMapping.values():
+                                metric_id = list(self.metricMapping.keys())[list(self.metricMapping.values()).index(metric['name'])]
                             # Add the metric ID to the metric mapping if it's not there
-                            elif metric_id not in metricMapping.keys():
-                                metricMapping.update({ metric_id : metric['name']})
+                            elif metric_id not in self.metricMapping.keys():
+                                self.metricMapping.update({ metric_id : metric['name']})
                             
+                            # Convert lists (stopwatches) to strings for better parsing (and OTA space)
+                            if isinstance(metric['value'], list):
+                                metric['value'] = ",".join([str(v) for v in metric['value']])
+
                             # Update the match scout with the metric ID to value
                             # This is mainly to remove various junk that we don't care about
                             shortened_match_scout.update({ metric_id : metric['value'] })
@@ -196,7 +208,7 @@ class BackgroundADBWatcher(threading.Thread):
                     else:
                         combinedScoutingData['teams'][team] += shortened_team_scout  # type: ignore
             
-            combinedScoutingData['template'] = metricMapping # type: ignore
+            combinedScoutingData['template'] = self.metricMapping # type: ignore
 
         # Do this once we release the lock so the wipe method can actually wipe
         self.wipe()
@@ -204,6 +216,10 @@ class BackgroundADBWatcher(threading.Thread):
         if len(combinedScoutingData['template']) == 0 or all([len(match_scouts) == 0 for team, match_scouts in combinedScoutingData['teams'].items()]):
             print(f"No new data received since last clear... Skipping data send...")
             return True
+
+        for team, match_scouts in list(combinedScoutingData['teams'].items()):
+            if len(match_scouts) <= 0:
+                combinedScoutingData['teams'].pop(team)
 
         print(f"Finding LoRa serial device...")
         # Now we need to send the JSON data to the serial device connected (LoRa Sender).
@@ -213,27 +229,33 @@ class BackgroundADBWatcher(threading.Thread):
             ports = list(serial.tools.list_ports.comports())
             for idx, port in enumerate(ports):
                 # Make sure to ignore Android/SAMSUNG devices... 
-                if "SAMSUNG" in str(port):
+                if "Feather 32u4" not in str(port):
                     ports.pop(idx)
         ports = sorted(ports, key=lambda p: str(p))
         port = ports[0]
 
         print(f"Detected serial device on port: '{port}'...")
-        serial_device = serial.Serial(port[0], 9600, timeout=2.5)
+        serial_device = serial.Serial(port[0], 9600, timeout=15.0)
         
         # The separators argument makes sure that the final output JSON is ideally very slim
         # (aka it strips off extra whitespace on lists and key/value pairs).
         json_dump = json.dumps(combinedScoutingData, separators=(',', ':'))
         
-        packet = json_dump.encode('ascii')
+        packet = json_dump.encode('utf-8').strip(b"\x00") + _SCOUTING_EOF
         
-        print(f"{json_dump=}")
         print(f"Packet Size: {len(packet)}")
 
-        serial_device.write(packet + b"\x00\xFF\x32\x84\xFF\x00")
-
+        step = 128
+        for i in range(0, len(packet), step):
+            print(f"\t[{i // step}] Sending split serial packet...")
+            serial_device.write(packet[i:i+step])
+            serial_device.read_until(_SCOUTING_EOF)
+        print(f"Serial data sent...")        
         with open(self.cache_path, "w+") as f:
-            json.dump(self.cachedScoutingData, f)
+            json.dump({
+                'cache': self.cachedScoutingData,
+                'template': self.metricMapping
+            }, f, indent=4)
 
         return True
 
@@ -249,8 +271,10 @@ class BackgroundADBWatcher(threading.Thread):
         with self.event_lock:
             self.cachedScoutingData.clear()
             with open(self.cache_path, "w+") as f:
-                json.dump(self.cachedScoutingData, f)
-        
+                json.dump({
+                    'cache': self.cachedScoutingData,
+                    'template': self.metricMapping
+                }, f, indent=4)
         return True
 
     def stop(self):
